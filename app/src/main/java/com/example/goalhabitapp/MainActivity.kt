@@ -22,6 +22,9 @@
         import com.example.goalhabitapp.data.repository.GoalsRepository
         import com.example.goalhabitapp.ui.profile.ProfileScreen
         import com.example.goalhabitapp.data.repository.ProfileRepository
+        import com.example.goalhabitapp.data.repository.FriendsRepository
+        import com.example.goalhabitapp.ui.friends.FriendsScreen
+        import com.example.goalhabitapp.ui.friends.FriendProfileScreen
 
         class MainActivity : ComponentActivity() {
             override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,12 +36,13 @@
                             val nav = rememberNavController()
 
                             val tokenStore = remember { TokenStore(this) }
-                            val api = remember { Network.api("http:///10.0.2.2:8000/", tokenStore) }
+                            val api = remember { Network.api("http://10.0.2.2:8000/", tokenStore) }
                             val profileRepo = remember { ProfileRepository(api) }
                             val authRepo = remember { AuthRepository(api, tokenStore) }
                             val templatesRepo = remember { TemplatesRepository(api) }
                             val habitsRepo = remember { HabitsRepository(api) }
                             val goalsRepo = remember { GoalsRepository(api) }
+                            val friendsRepo = remember { FriendsRepository(api) }
 
                             NavHost(navController = nav, startDestination = Routes.Splash) {
 
@@ -93,11 +97,15 @@
                                 // ✅ HOME
                                 composable(Routes.Home) {
                                     com.example.goalhabitapp.ui.home.HomeScreen(
-                                        onGoTemplates = { nav.navigate(Routes.Templates) },
-                                        onGoHabits = { nav.navigate(Routes.Habits) },
-                                        onGoGoals = { nav.navigate(Routes.Goals) },
-                                        onGoProfile = { nav.navigate(Routes.Profile) }
-                                    )
+                                            onGoTemplates = { nav.navigate(Routes.Templates) },
+                                            onGoHabits = { nav.navigate(Routes.Habits) },
+                                            onGoGoals = { nav.navigate(Routes.Goals) },
+                                            onGoProfile = { nav.navigate(Routes.Profile) },
+                                            onGoFriends = { nav.navigate(Routes.Friends) }
+                                        )
+
+
+
 
                                 }
 
@@ -120,6 +128,25 @@
                                 composable(Routes.Profile) {
                                     ProfileScreen(
                                         repo = profileRepo,
+                                        onBack = { nav.popBackStack() }
+                                    )
+                                }
+
+                                composable(Routes.Friends) {
+                                    FriendsScreen(
+                                        repo = friendsRepo,
+                                        onOpenProfile = { id ->
+                                            nav.navigate(Routes.friendProfile(id))
+                                        },
+                                        onBack = { nav.popBackStack() }
+                                    )
+                                }
+
+                                composable(Routes.FriendProfile) { backStack ->
+                                    val id = backStack.arguments?.getString("id")!!.toInt()
+                                    FriendProfileScreen(
+                                        friendId = id,
+                                        repo = friendsRepo,
                                         onBack = { nav.popBackStack() }
                                     )
                                 }

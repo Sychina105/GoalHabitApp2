@@ -13,4 +13,9 @@ object Routes {
 
     const val Profile = "profile"
 
+    const val Friends = "friends"
+    const val FriendProfile = "friend_profile/{id}"
+    fun friendProfile(id: Int) = "friend_profile/$id"
+
+
 }

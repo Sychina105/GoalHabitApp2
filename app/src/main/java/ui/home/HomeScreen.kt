@@ -2,6 +2,7 @@ package com.example.goalhabitapp.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -17,11 +18,9 @@ fun HomeScreen(
     onGoTemplates: () -> Unit,
     onGoHabits: () -> Unit,
     onGoGoals: () -> Unit,
-    onGoProfile: () -> Unit
-
+    onGoProfile: () -> Unit,
+    onGoFriends: () -> Unit
 ) {
-    Button(onClick = onGoProfile) { Text("Профиль") }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -35,23 +34,37 @@ fun HomeScreen(
 
         Button(
             onClick = onGoGoals,
-            modifier = Modifier.fillMaxSize(fraction = 0.2f)
+            modifier = Modifier.fillMaxWidth()
         ) {
             Text("Мои цели")
         }
 
         Button(
             onClick = onGoHabits,
-            modifier = Modifier.fillMaxSize(fraction = 0.2f)
+            modifier = Modifier.fillMaxWidth()
         ) {
             Text("Мои привычки")
         }
 
         OutlinedButton(
             onClick = onGoTemplates,
-            modifier = Modifier.fillMaxSize(fraction = 0.2f)
+            modifier = Modifier.fillMaxWidth()
         ) {
             Text("Шаблоны целей")
+        }
+
+        Button(
+            onClick = onGoProfile,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Профиль")
+        }
+
+        Button(
+            onClick = onGoFriends,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Друзья")
         }
     }
 }

@@ -3,7 +3,7 @@ package com.example.goalhabitapp.data.remote.dto
 data class PublicUserDto(
     val id: Int,
     val name: String,
-    val email: String? = null
+    val status: String // NONE | OUTGOING | INCOMING | FRIEND
 )
 
 data class FriendProfileDto(
