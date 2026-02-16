@@ -16,6 +16,7 @@ import java.time.LocalDate
 fun HabitsScreen(
     repo: HabitsRepository,
     onCreate: () -> Unit,
+    onEdit: (Long) -> Unit,
     onBack: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -23,6 +24,9 @@ fun HabitsScreen(
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var info by remember { mutableStateOf<String?>(null) }
+
+    val today = remember { LocalDate.now().toString() }
+    var checkedTodayIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
 
     fun freqLabel(h: HabitDto): String = when {
         h.periodDays == 1 && h.timesPerPeriod == 1 -> "Каждый день"
@@ -69,25 +73,63 @@ fun HabitsScreen(
             error != null -> Text("Ошибка: $error", color = MaterialTheme.colorScheme.error)
             else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(items) { h ->
+                    val checkedToday = checkedTodayIds.contains(h.id)
+
                     Card {
                         Column(Modifier.fillMaxWidth().padding(12.dp)) {
                             Text(h.title, style = MaterialTheme.typography.titleMedium)
                             Text("Частота: ${freqLabel(h)}")
                             Spacer(Modifier.height(8.dp))
 
-                            Button(
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        scope.launch {
+                                            try {
+                                                repo.checkIn(h.id, today)
+                                                checkedTodayIds = checkedTodayIds + h.id
+                                                info = "Отмечено за сегодня ✅"
+                                            } catch (e: Exception) {
+                                                error = "Check-in: ${e.message}"
+                                            }
+                                        }
+                                    },
+                                    enabled = !checkedToday,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(if (checkedToday) "Отмечено ✅" else "Отметить сегодня")
+                                }
+
+                                OutlinedButton(
+                                    onClick = { onEdit(h.id) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Редактировать")
+                                }
+                            }
+
+                            Spacer(Modifier.height(8.dp))
+
+                            OutlinedButton(
                                 onClick = {
                                     scope.launch {
                                         try {
-                                            val today = LocalDate.now().toString() // YYYY-MM-DD
-                                            repo.checkIn(h.id, today)
-                                            info = "Отмечено за сегодня ✅"
+                                            repo.delete(h.id)
+                                            checkedTodayIds = checkedTodayIds - h.id
+                                            load()
                                         } catch (e: Exception) {
-                                            error = "Check-in: ${e.message}"
+                                            error = e.message
                                         }
                                     }
-                                }
-                            ) { Text("Отметить сегодня") }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Удалить")
+                            }
+
                         }
                     }
                 }

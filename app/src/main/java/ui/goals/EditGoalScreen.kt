@@ -2,23 +2,23 @@ package com.example.goalhabitapp.ui.goals
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.example.goalhabitapp.data.remote.dto.GoalCreateRequest
+import com.example.goalhabitapp.data.remote.dto.GoalUpdateRequest
 import com.example.goalhabitapp.data.repository.GoalsRepository
 import kotlinx.coroutines.launch
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateGoalScreen(
+fun EditGoalScreen(
+    goalId: Long,
     repo: GoalsRepository,
     onDone: () -> Unit,
     onBack: () -> Unit
@@ -26,26 +26,24 @@ fun CreateGoalScreen(
     val scope = rememberCoroutineScope()
     val focus = LocalFocusManager.current
 
-    // Красивые поля
+    var loading by remember { mutableStateOf(true) }
+    var saving by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
 
-    // Тип цели (показываем по-русски, отправляем enum)
     val goalTypeOptions = listOf(
         "Количественная" to "QUANT",
         "По шагам" to "STEPS",
         "Привычка как цель" to "HABIT_AS_GOAL"
     )
-    var goalType by remember { mutableStateOf(goalTypeOptions.first().second) } // enum
+    var goalType by remember { mutableStateOf("QUANT") }
 
-    // Кол-во (только для QUANT)
     var targetValueText by remember { mutableStateOf("") }
-
-    // Unit dropdown (для QUANT)
     val unitOptions = listOf("км", "книг", "часов", "дней", "раз", "страниц", "кг")
     var unit by remember { mutableStateOf(unitOptions.first()) }
 
-    // Статус dropdown
     val statusOptions = listOf(
         "Активна" to "ACTIVE",
         "На паузе" to "PAUSED",
@@ -54,30 +52,63 @@ fun CreateGoalScreen(
     )
     var status by remember { mutableStateOf("ACTIVE") }
 
-    // Дедлайн через DatePicker
+    var priorityText by remember { mutableStateOf("3") }
+
     var showDatePicker by remember { mutableStateOf(false) }
-    var deadline by remember { mutableStateOf<String?>(null) } // "YYYY-MM-DD" или null
-
-    // Приоритет — скрываем (по умолчанию 3)
-    val priorityDefault = 3
-
-    var loading by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var deadline by remember { mutableStateOf<String?>(null) }
 
     fun goalTypeLabel(enumValue: String): String =
-        goalTypeOptions.first { it.second == enumValue }.first
+        goalTypeOptions.firstOrNull { it.second == enumValue }?.first ?: enumValue
 
     fun statusLabel(enumValue: String): String =
-        statusOptions.first { it.second == enumValue }.first
+        statusOptions.firstOrNull { it.second == enumValue }?.first ?: enumValue
 
-    // ---------- UI ----------
+    fun load() {
+        loading = true
+        error = null
+        scope.launch {
+            try {
+                val g = repo.list().firstOrNull { it.id == goalId }
+                if (g == null) {
+                    error = "Цель не найдена"
+                } else {
+                    title = g.title
+                    description = g.description ?: ""
+                    goalType = g.goalType
+                    targetValueText = g.targetValue?.toString() ?: ""
+                    unit = g.unit ?: unitOptions.first()
+                    deadline = g.deadline
+                    priorityText = g.priority.toString()
+                    status = g.status
+                }
+            } catch (e: Exception) {
+                error = e.message
+            } finally {
+                loading = false
+            }
+        }
+    }
+
+    LaunchedEffect(goalId) { load() }
+
     Column(
-        Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text("Новая цель", style = MaterialTheme.typography.headlineSmall)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Редактировать цель", style = MaterialTheme.typography.headlineSmall)
+            TextButton(onClick = onBack) { Text("Назад") }
+        }
+
+        if (loading) {
+            Text("Загрузка...")
+            return@Column
+        }
+
+        error?.let {
+            Text("Ошибка: $it", color = MaterialTheme.colorScheme.error)
+            return@Column
+        }
 
         OutlinedTextField(
             value = title,
@@ -93,7 +124,6 @@ fun CreateGoalScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Тип цели (dropdown)
         EnumDropdown(
             label = "Тип цели",
             currentLabel = goalTypeLabel(goalType),
@@ -101,18 +131,14 @@ fun CreateGoalScreen(
             onSelectIndex = { idx -> goalType = goalTypeOptions[idx].second }
         )
 
-        // Кол-во + единица показываем только для QUANT
-        if (goalType == "QUANT") {
+        val isQuant = goalType == "QUANT"
+        if (isQuant) {
             OutlinedTextField(
                 value = targetValueText,
-                onValueChange = { new ->
-                    // оставляем только цифры
-                    targetValueText = new.filter { it.isDigit() }
-                },
+                onValueChange = { targetValueText = it.filter(Char::isDigit) },
                 label = { Text("Целевое значение") },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                
             )
 
             EnumDropdown(
@@ -122,11 +148,9 @@ fun CreateGoalScreen(
                 onSelectIndex = { idx -> unit = unitOptions[idx] }
             )
         } else {
-            // чтобы не путаться: чистим “количество”, если тип не QUANT
             targetValueText = ""
         }
 
-        // Дедлайн (DatePicker)
         OutlinedTextField(
             value = deadline ?: "",
             onValueChange = {},
@@ -141,7 +165,14 @@ fun CreateGoalScreen(
             placeholder = { Text("Выбрать дату") }
         )
 
-        // Статус (dropdown)
+        OutlinedTextField(
+            value = priorityText,
+            onValueChange = { priorityText = it.filter(Char::isDigit) },
+            label = { Text("Приоритет (1-5)") },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+        )
+
         EnumDropdown(
             label = "Статус",
             currentLabel = statusLabel(status),
@@ -149,59 +180,59 @@ fun CreateGoalScreen(
             onSelectIndex = { idx -> status = statusOptions[idx].second }
         )
 
-        error?.let { Text("Ошибка: $it", color = MaterialTheme.colorScheme.error) }
+        Spacer(Modifier.height(6.dp))
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) { Text("Назад") }
+            OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) { Text("Отмена") }
 
             Button(
                 onClick = {
-                    loading = true
+                    saving = true
                     error = null
                     focus.clearFocus()
 
                     scope.launch {
                         try {
-                            val isQuant = goalType == "QUANT"
-                            val targetValue = if (isQuant) targetValueText.toIntOrNull() else null
-
-                            // простая валидация
-                            if (title.trim().isEmpty()) {
-                                error = "Введите название цели"
+                            val t = title.trim()
+                            if (t.isEmpty()) {
+                                error = "Введите название"
                                 return@launch
                             }
+
+                            val pr = priorityText.toIntOrNull() ?: 3
+                            val targetValue = if (isQuant) targetValueText.toIntOrNull() else null
                             if (isQuant && (targetValue == null || targetValue <= 0)) {
                                 error = "Введите корректное целевое значение"
                                 return@launch
                             }
 
-                            val req = GoalCreateRequest(
-                                title = title.trim(),
-                                description = description.trim().ifBlank { null },
-                                goalType = goalType,
-                                targetValue = targetValue,
-                                unit = if (isQuant) unit else null,
-                                deadline = deadline,
-                                priority = priorityDefault,
-                                //status = status
+                            repo.update(
+                                goalId,
+                                GoalUpdateRequest(
+                                    title = t,
+                                    description = description.trim().ifBlank { null },
+                                    goalType = goalType,
+                                    targetValue = targetValue,
+                                    unit = if (isQuant) unit else null,
+                                    deadline = deadline,
+                                    priority = pr,
+                                    status = status
+                                )
                             )
-                            println(req)
-                            repo.create(req)
                             onDone()
                         } catch (e: Exception) {
                             error = e.message
                         } finally {
-                            loading = false
+                            saving = false
                         }
                     }
                 },
-                enabled = !loading,
+                enabled = !saving,
                 modifier = Modifier.weight(1f)
-            ) { Text(if (loading) "..." else "Создать") }
+            ) { Text(if (saving) "..." else "Сохранить") }
         }
     }
 
-    // ---------- DatePicker Dialog ----------
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState()
         DatePickerDialog(
@@ -213,12 +244,8 @@ fun CreateGoalScreen(
                     showDatePicker = false
                 }) { Text("ОК") }
             },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Отмена") }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Отмена") } }
+        ) { DatePicker(state = datePickerState) }
     }
 }
 
@@ -242,15 +269,10 @@ private fun EnumDropdown(
             readOnly = true,
             label = { Text(label) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor()
+            modifier = Modifier.fillMaxWidth().menuAnchor()
         )
 
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEachIndexed { idx, item ->
                 DropdownMenuItem(
                     text = { Text(item) },
@@ -265,9 +287,6 @@ private fun EnumDropdown(
 }
 
 private fun millisToIsoDate(millis: Long): String {
-    val date = Instant.ofEpochMilli(millis)
-        .atZone(ZoneId.systemDefault())
-        .toLocalDate()
-    // YYYY-MM-DD
+    val date = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
     return date.toString()
 }

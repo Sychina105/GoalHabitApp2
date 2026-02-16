@@ -12,6 +12,12 @@ data class HabitDto(
     val periodDays: Int,
     val timesPerPeriod: Int
 )
+data class HabitUpdateRequest(
+    val title: String? = null,
+    val periodDays: Int? = null,
+    val timesPerPeriod: Int? = null
+)
+
 
 data class CheckInRequest(
     val date: String,

@@ -25,6 +25,7 @@
         import com.example.goalhabitapp.data.repository.FriendsRepository
         import com.example.goalhabitapp.ui.friends.FriendsScreen
         import com.example.goalhabitapp.ui.friends.FriendProfileScreen
+        import kotlinx.coroutines.launch
 
         class MainActivity : ComponentActivity() {
             override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,15 +35,18 @@
                     MaterialTheme {
                         Surface {
                             val nav = rememberNavController()
+                            val scope = androidx.compose.runtime.rememberCoroutineScope()
 
                             val tokenStore = remember { TokenStore(this) }
                             val api = remember { Network.api("http://10.0.2.2:8000/", tokenStore) }
+
                             val profileRepo = remember { ProfileRepository(api) }
                             val authRepo = remember { AuthRepository(api, tokenStore) }
                             val templatesRepo = remember { TemplatesRepository(api) }
                             val habitsRepo = remember { HabitsRepository(api) }
                             val goalsRepo = remember { GoalsRepository(api) }
                             val friendsRepo = remember { FriendsRepository(api) }
+
 
                             NavHost(navController = nav, startDestination = Routes.Splash) {
 
@@ -97,14 +101,12 @@
                                 // ✅ HOME
                                 composable(Routes.Home) {
                                     com.example.goalhabitapp.ui.home.HomeScreen(
-                                            onGoTemplates = { nav.navigate(Routes.Templates) },
-                                            onGoHabits = { nav.navigate(Routes.Habits) },
-                                            onGoGoals = { nav.navigate(Routes.Goals) },
-                                            onGoProfile = { nav.navigate(Routes.Profile) },
-                                            onGoFriends = { nav.navigate(Routes.Friends) }
-                                        )
-
-
+                                        onGoTemplates = { nav.navigate(Routes.Templates) },
+                                        onGoHabits = { nav.navigate(Routes.Habits) },
+                                        onGoGoals = { nav.navigate(Routes.Goals) },
+                                        onGoProfile = { nav.navigate(Routes.Profile) },
+                                        onGoFriends = { nav.navigate(Routes.Friends) }
+                                    )
 
 
                                 }
@@ -114,6 +116,7 @@
                                     com.example.goalhabitapp.ui.habits.HabitsScreen(
                                         repo = habitsRepo,
                                         onCreate = { nav.navigate(Routes.CreateHabit) },
+                                        onEdit = { id -> nav.navigate(Routes.editHabit(id)) },
                                         onBack = { nav.popBackStack() }
                                     )
                                 }
@@ -125,12 +128,7 @@
                                         onBack = { nav.popBackStack() }
                                     )
                                 }
-                                composable(Routes.Profile) {
-                                    ProfileScreen(
-                                        repo = profileRepo,
-                                        onBack = { nav.popBackStack() }
-                                    )
-                                }
+
 
                                 composable(Routes.Friends) {
                                     FriendsScreen(
@@ -150,6 +148,15 @@
                                         onBack = { nav.popBackStack() }
                                     )
                                 }
+                                composable(Routes.EditHabit) { backStack ->
+                                    val id = backStack.arguments?.getString("id")!!.toLong()
+                                    com.example.goalhabitapp.ui.habits.EditHabitScreen(
+                                        habitId = id,
+                                        repo = habitsRepo,
+                                        onDone = { nav.popBackStack() },
+                                        onBack = { nav.popBackStack() }
+                                    )
+                                }
 
 
                                 // ✅ GOALS
@@ -157,12 +164,21 @@
                                     com.example.goalhabitapp.ui.goals.GoalsScreen(
                                         repo = goalsRepo,
                                         onCreate = { nav.navigate(Routes.CreateGoal) },
+                                        onEdit = { id -> nav.navigate(Routes.editGoal(id)) },
                                         onBack = { nav.popBackStack() }
                                     )
                                 }
-
                                 composable(Routes.CreateGoal) {
                                     com.example.goalhabitapp.ui.goals.CreateGoalScreen(
+                                        repo = goalsRepo,
+                                        onDone = { nav.popBackStack() },
+                                        onBack = { nav.popBackStack() }
+                                    )
+                                }
+                                composable(Routes.EditGoal) { backStack ->
+                                    val id = backStack.arguments?.getString("id")!!.toLong()
+                                    com.example.goalhabitapp.ui.goals.EditGoalScreen(
+                                        goalId = id,
                                         repo = goalsRepo,
                                         onDone = { nav.popBackStack() },
                                         onBack = { nav.popBackStack() }
@@ -173,11 +189,25 @@
                                 composable(Routes.Templates) {
                                     TemplatesScreen(
                                         templatesRepo = templatesRepo,
+                                        goalsRepo = goalsRepo,
+                                        onGoGoals = { nav.navigate(Routes.Goals) },
                                         onLogout = {
-                                            // (опционально) тут можно вызвать authRepo.logout() в корутине
                                             nav.navigate(Routes.Login) {
-                                                popUpTo(Routes.Home) {
-                                                    inclusive = true
+                                                popUpTo(Routes.Home) { inclusive = true }
+                                            }
+                                        }
+                                    )
+                                }
+
+                                composable(Routes.Profile) {
+                                    ProfileScreen(
+                                        repo = profileRepo,
+                                        onBack = { nav.popBackStack() },
+                                        onLogout = {
+                                            scope.launch {
+                                                tokenStore.clear()
+                                                nav.navigate(Routes.Login) {
+                                                    popUpTo(Routes.Home) { inclusive = true }
                                                 }
                                             }
                                         }

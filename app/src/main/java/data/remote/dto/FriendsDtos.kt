@@ -3,7 +3,9 @@ package com.example.goalhabitapp.data.remote.dto
 data class PublicUserDto(
     val id: Int,
     val name: String,
-    val status: String // NONE | OUTGOING | INCOMING | FRIEND
+    val status: String, // NONE | OUTGOING | INCOMING | FRIEND
+    val currentHabitStreak: Int? ,
+    val achievementsEarned: Int?
 )
 
 data class FriendProfileDto(
@@ -14,6 +16,11 @@ data class FriendProfileDto(
 )
 
 data class FriendUserDto(
+    val id: Int,
+    val name: String
+)
+
+data class SimpleUserDto(
     val id: Int,
     val name: String
 )

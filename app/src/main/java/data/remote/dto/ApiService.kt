@@ -60,5 +60,28 @@ interface ApiService {
     @GET("profile/{id}")
     suspend fun friendProfile(@Path("id") id: Int): FriendProfileDto
 
+    @DELETE("habits/{id}")
+    suspend fun deleteHabit(@Path("id") id: Long)
+
+    @DELETE("goals/{id}")
+    suspend fun deleteGoal(@Path("id") id: Long)
+
+    @PUT("goals/{id}/status")
+    suspend fun setGoalStatus(
+        @Path("id") id: Long,
+        @Body req: GoalStatusRequest
+    )
+
+    @PUT("goals/{id}")
+    suspend fun updateGoal(
+        @Path("id") id: Long,
+        @Body req: GoalUpdateRequest
+    ): GoalDto
+
+    @PUT("habits/{id}")
+    suspend fun updateHabit(
+        @Path("id") id: Long,
+        @Body req: HabitUpdateRequest
+    ): HabitDto
 
 }

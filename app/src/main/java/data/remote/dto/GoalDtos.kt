@@ -8,7 +8,18 @@ data class GoalCreateRequest(
     val unit: String?,
     val deadline: String?,      // "YYYY-MM-DD" или null
     val priority: Int,
-    val status: String          // ACTIVE | PAUSED | DONE | CANCELED
+    //val status: String          // ACTIVE | PAUSED | DONE | CANCELED
+)
+
+data class GoalUpdateRequest(
+    val title: String? = null,
+    val description: String? = null,
+    val goalType: String? = null,
+    val targetValue: Int? = null,
+    val unit: String? = null,
+    val deadline: String? = null,
+    val priority: Int? = null,
+    val status: String? = null
 )
 
 data class GoalDto(
@@ -23,3 +34,5 @@ data class GoalDto(
     val priority: Int,
     val status: String
 )
+data class GoalStatusRequest(val status: String)
+

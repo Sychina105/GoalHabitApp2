@@ -15,8 +15,10 @@ import kotlinx.coroutines.launch
 @Composable
 fun ProfileScreen(
     repo: ProfileRepository,
-    onBack: () -> Unit
-) {
+    onBack: () -> Unit,
+    onLogout: () -> Unit
+)
+ {
     val scope = rememberCoroutineScope()
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -56,6 +58,14 @@ fun ProfileScreen(
             Text("Ошибка: $it", color = MaterialTheme.colorScheme.error)
             return@Column
         }
+        Button(
+            onClick = onLogout,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+        ) {
+            Text("Выйти", color = MaterialTheme.colorScheme.onError)
+        }
+
 
         // --- статистика ---
         Card(Modifier.fillMaxWidth()) {
@@ -96,5 +106,9 @@ fun ProfileScreen(
                 }
             }
         }
+        Spacer(Modifier.height(12.dp))
+
+
+
     }
 }

@@ -12,7 +12,7 @@ import com.example.goalhabitapp.data.remote.dto.HabitCreateRequest
 import com.example.goalhabitapp.data.repository.HabitsRepository
 import kotlinx.coroutines.launch
 
-private enum class FreqMode {
+enum class FreqMode {
     DAILY,          // каждый день
     EVERY_N_DAYS,   // каждые N дней
     N_PER_WEEK,     // N раз в неделю
@@ -127,7 +127,7 @@ fun CreateHabitScreen(
 }
 
 @Composable
-private fun FrequencyDialog(
+     fun FrequencyDialog(
     initialPeriodDays: Int,
     initialTimesPerPeriod: Int,
     onDismiss: () -> Unit,
