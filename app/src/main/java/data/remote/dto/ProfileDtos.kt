@@ -3,7 +3,8 @@ package com.example.goalhabitapp.data.remote.dto
 data class ProfileDto(
     val currentHabitStreak: Int,
     val goalsCompleted: Int,
-    val achievements: List<AchievementDto>
+    val achievements: List<AchievementDto>,
+    val goals: List<GoalDto> = emptyList()
 )
 
 data class AchievementDto(

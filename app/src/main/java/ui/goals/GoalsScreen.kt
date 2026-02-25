@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.goalhabitapp.data.remote.dto.GoalDto
+import com.example.goalhabitapp.data.remote.dto.GoalUpdateRequest
 import com.example.goalhabitapp.data.repository.GoalsRepository
 import kotlinx.coroutines.launch
 
@@ -63,6 +64,26 @@ fun GoalsScreen(
                 TextButton(onClick = onBack) { Text("Назад") }
                 TextButton(onClick = onCreate) { Text("+") }
             }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Показывать в профиле")
+            Switch(
+                checked = g.showInProfile,
+                onCheckedChange = { checked ->
+                    scope.launch {
+                        try {
+                            repo.update(g.id, GoalUpdateRequest(showInProfile = checked))
+                            load()
+                        } catch (e: Exception) {
+                            error = e.message
+                        }
+                    }
+                }
+            )
         }
 
         Spacer(Modifier.height(12.dp))
