@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.goalhabitapp.data.remote.dto.GoalDto
@@ -39,7 +40,6 @@ fun GoalsScreen(
         else -> s
     }
 
-
     fun load() {
         loading = true
         error = null
@@ -66,26 +66,6 @@ fun GoalsScreen(
             }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("Показывать в профиле")
-            Switch(
-                checked = g.showInProfile,
-                onCheckedChange = { checked ->
-                    scope.launch {
-                        try {
-                            repo.update(g.id, GoalUpdateRequest(showInProfile = checked))
-                            load()
-                        } catch (e: Exception) {
-                            error = e.message
-                        }
-                    }
-                }
-            )
-        }
-
         Spacer(Modifier.height(12.dp))
 
         when {
@@ -96,15 +76,44 @@ fun GoalsScreen(
                 items(items) { g ->
                     Card {
                         Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                            Text(g.title, style = MaterialTheme.typography.titleMedium)
-                            Text("Тип: ${goalTypeLabel(g.goalType)} | Статус: ${statusLabel(g.status)} | Приоритет: ${g.priority}")
 
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(g.title, style = MaterialTheme.typography.titleMedium)
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("В профиль")
+                                    Spacer(Modifier.width(8.dp))
+                                    Switch(
+                                        checked = g.showInProfile,
+                                        onCheckedChange = { checked ->
+                                            scope.launch {
+                                                try {
+                                                    repo.update(
+                                                        g.id,
+                                                        GoalUpdateRequest(showInProfile = checked)
+                                                    )
+                                                    load()
+                                                } catch (e: Exception) {
+                                                    error = e.message
+                                                }
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+
+                            Text("Тип: ${goalTypeLabel(g.goalType)} | Статус: ${statusLabel(g.status)} | Приоритет: ${g.priority}")
 
                             Text(
                                 "Прогресс: ${g.progressValue}" +
                                         (g.targetValue?.let { "/$it" } ?: "") +
                                         (g.unit?.let { " $it" } ?: "")
                             )
+
                             g.deadline?.let { Text("Дедлайн: $it") }
                             g.description?.takeIf { it.isNotBlank() }?.let { Text(it) }
 

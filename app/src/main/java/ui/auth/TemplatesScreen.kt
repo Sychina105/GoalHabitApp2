@@ -101,6 +101,7 @@ fun TemplatesScreen(
                                                     targetValue = if (isQuant) t.suggestedTarget else null,
                                                     unit = if (isQuant) t.suggestedUnit else null,
                                                     deadline = null,
+                                                    status = "1",
                                                     priority = 3
                                                 )
 

@@ -2,18 +2,17 @@ package com.example.goalhabitapp.ui.goals
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.goalhabitapp.data.remote.dto.GoalCreateRequest
 import com.example.goalhabitapp.data.repository.GoalsRepository
 import kotlinx.coroutines.launch
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,26 +25,21 @@ fun CreateGoalScreen(
     val scope = rememberCoroutineScope()
     val focus = LocalFocusManager.current
 
-    // Красивые поля
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
 
-    // Тип цели (показываем по-русски, отправляем enum)
     val goalTypeOptions = listOf(
         "Количественная" to "QUANT",
         "По шагам" to "STEPS",
         "Привычка как цель" to "HABIT_AS_GOAL"
     )
-    var goalType by remember { mutableStateOf(goalTypeOptions.first().second) } // enum
+    var goalType by remember { mutableStateOf(goalTypeOptions.first().second) }
 
-    // Кол-во (только для QUANT)
     var targetValueText by remember { mutableStateOf("") }
 
-    // Unit dropdown (для QUANT)
     val unitOptions = listOf("км", "книг", "часов", "дней", "раз", "страниц", "кг")
     var unit by remember { mutableStateOf(unitOptions.first()) }
 
-    // Статус dropdown
     val statusOptions = listOf(
         "Активна" to "ACTIVE",
         "На паузе" to "PAUSED",
@@ -54,23 +48,23 @@ fun CreateGoalScreen(
     )
     var status by remember { mutableStateOf("ACTIVE") }
 
-    // Дедлайн через DatePicker
-    var showDatePicker by remember { mutableStateOf(false) }
-    var deadline by remember { mutableStateOf<String?>(null) } // "YYYY-MM-DD" или null
+    // ✅ showInProfile: по умолчанию false, потом будем переключать в GoalsScreen
+    var showInProfile by remember { mutableStateOf(false) }
 
-    // Приоритет — скрываем (по умолчанию 3)
+    var showDatePicker by remember { mutableStateOf(false) }
+    var deadline by remember { mutableStateOf<String?>(null) }
+
     val priorityDefault = 3
 
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
     fun goalTypeLabel(enumValue: String): String =
-        goalTypeOptions.first { it.second == enumValue }.first
+        goalTypeOptions.firstOrNull { it.second == enumValue }?.first ?: enumValue
 
     fun statusLabel(enumValue: String): String =
-        statusOptions.first { it.second == enumValue }.first
+        statusOptions.firstOrNull { it.second == enumValue }?.first ?: enumValue
 
-    // ---------- UI ----------
     Column(
         Modifier
             .fillMaxSize()
@@ -93,7 +87,6 @@ fun CreateGoalScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Тип цели (dropdown)
         EnumDropdown(
             label = "Тип цели",
             currentLabel = goalTypeLabel(goalType),
@@ -101,18 +94,13 @@ fun CreateGoalScreen(
             onSelectIndex = { idx -> goalType = goalTypeOptions[idx].second }
         )
 
-        // Кол-во + единица показываем только для QUANT
         if (goalType == "QUANT") {
             OutlinedTextField(
                 value = targetValueText,
-                onValueChange = { new ->
-                    // оставляем только цифры
-                    targetValueText = new.filter { it.isDigit() }
-                },
+                onValueChange = { new -> targetValueText = new.filter { it.isDigit() } },
                 label = { Text("Целевое значение") },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                
             )
 
             EnumDropdown(
@@ -122,11 +110,12 @@ fun CreateGoalScreen(
                 onSelectIndex = { idx -> unit = unitOptions[idx] }
             )
         } else {
-            // чтобы не путаться: чистим “количество”, если тип не QUANT
-            targetValueText = ""
+            // ✅ не меняем состояние во время композиции, делаем это эффектом
+            LaunchedEffect(goalType) {
+                targetValueText = ""
+            }
         }
 
-        // Дедлайн (DatePicker)
         OutlinedTextField(
             value = deadline ?: "",
             onValueChange = {},
@@ -141,13 +130,23 @@ fun CreateGoalScreen(
             placeholder = { Text("Выбрать дату") }
         )
 
-        // Статус (dropdown)
         EnumDropdown(
             label = "Статус",
             currentLabel = statusLabel(status),
             options = statusOptions.map { it.first },
             onSelectIndex = { idx -> status = statusOptions[idx].second }
         )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Показывать в профиле")
+            Switch(
+                checked = showInProfile,
+                onCheckedChange = { showInProfile = it }
+            )
+        }
 
         error?.let { Text("Ошибка: $it", color = MaterialTheme.colorScheme.error) }
 
@@ -165,7 +164,6 @@ fun CreateGoalScreen(
                             val isQuant = goalType == "QUANT"
                             val targetValue = if (isQuant) targetValueText.toIntOrNull() else null
 
-                            // простая валидация
                             if (title.trim().isEmpty()) {
                                 error = "Введите название цели"
                                 return@launch
@@ -183,9 +181,10 @@ fun CreateGoalScreen(
                                 unit = if (isQuant) unit else null,
                                 deadline = deadline,
                                 priority = priorityDefault,
-                                //status = status
+                                status = status,
+                                showInProfile = showInProfile
                             )
-                            println(req)
+
                             repo.create(req)
                             onDone()
                         } catch (e: Exception) {
@@ -201,7 +200,6 @@ fun CreateGoalScreen(
         }
     }
 
-    // ---------- DatePicker Dialog ----------
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState()
         DatePickerDialog(
@@ -265,9 +263,8 @@ private fun EnumDropdown(
 }
 
 private fun millisToIsoDate(millis: Long): String {
-    val date = Instant.ofEpochMilli(millis)
+    return Instant.ofEpochMilli(millis)
         .atZone(ZoneId.systemDefault())
         .toLocalDate()
-    // YYYY-MM-DD
-    return date.toString()
+        .toString()
 }
