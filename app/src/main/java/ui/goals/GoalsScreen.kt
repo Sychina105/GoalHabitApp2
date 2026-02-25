@@ -5,13 +5,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.goalhabitapp.data.remote.dto.GoalDto
 import com.example.goalhabitapp.data.remote.dto.GoalUpdateRequest
 import com.example.goalhabitapp.data.repository.GoalsRepository
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @Composable
 fun GoalsScreen(
@@ -21,9 +23,11 @@ fun GoalsScreen(
     onBack: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
+
     var items by remember { mutableStateOf<List<GoalDto>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    var info by remember { mutableStateOf<String?>(null) }
 
     fun goalTypeLabel(type: String) = when (type) {
         "QUANT" -> "Количественная"
@@ -38,6 +42,18 @@ fun GoalsScreen(
         "DONE" -> "Завершена"
         "CANCELED" -> "Отменена"
         else -> s
+    }
+
+    fun defaultDeltaFor(g: GoalDto): Int {
+        return when (g.goalType) {
+            "STEPS" -> 1000
+            "QUANT" -> {
+                // если цель маленькая — добавлять по 1, иначе по 5
+                val t = g.targetValue ?: 0
+                if (t in 1..10) 1 else 5
+            }
+            else -> 1
+        }
     }
 
     fun load() {
@@ -66,27 +82,74 @@ fun GoalsScreen(
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(10.dp))
+
+        info?.let {
+            Text(it, color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(8.dp))
+        }
 
         when {
             loading -> Text("Загрузка...")
             error != null -> Text("Ошибка: $error", color = MaterialTheme.colorScheme.error)
+            else -> {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(items, key = { it.id }) { g ->
 
-            else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(items) { g ->
-                    Card {
-                        Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                        var showAddDialog by remember(g.id) { mutableStateOf(false) }
+                        var deltaText by remember(g.id) { mutableStateOf(defaultDeltaFor(g).toString()) }
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                        Card {
+                            Column(Modifier.fillMaxWidth().padding(12.dp)) {
+
                                 Text(g.title, style = MaterialTheme.typography.titleMedium)
 
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("В профиль")
-                                    Spacer(Modifier.width(8.dp))
+                                Spacer(Modifier.height(4.dp))
+
+                                Text(
+                                    "Тип: ${goalTypeLabel(g.goalType)} | Статус: ${statusLabel(g.status)} | Приоритет: ${g.priority}"
+                                )
+
+                                Spacer(Modifier.height(6.dp))
+
+                                val progressLine = buildString {
+                                    append("Прогресс: ${g.progressValue}")
+                                    g.targetValue?.let { append("/$it") }
+                                    g.unit?.takeIf { it.isNotBlank() }?.let { append(" $it") }
+                                }
+                                Text(progressLine)
+
+                                // Прогрессбар только если есть targetValue
+                                val target = g.targetValue
+                                if (target != null && target > 0) {
+                                    Spacer(Modifier.height(6.dp))
+                                    val p = (g.progressValue.toFloat() / target.toFloat()).coerceIn(0f, 1f)
+                                    LinearProgressIndicator(
+                                        progress = p,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Text("${(p * 100f).roundToInt()}%")
+                                }
+
+                                g.deadline?.let {
+                                    Spacer(Modifier.height(6.dp))
+                                    Text("Дедлайн: $it")
+                                }
+
+                                g.description?.takeIf { it.isNotBlank() }?.let {
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(it)
+                                }
+
+                                Spacer(Modifier.height(10.dp))
+
+                                // Переключатель "Показывать в профиле" — ВНУТРИ каждой карточки
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Показывать в профиле")
                                     Switch(
                                         checked = g.showInProfile,
                                         onCheckedChange = { checked ->
@@ -96,6 +159,7 @@ fun GoalsScreen(
                                                         g.id,
                                                         GoalUpdateRequest(showInProfile = checked)
                                                     )
+                                                    info = if (checked) "Цель добавлена в профиль ✅" else "Цель скрыта из профиля"
                                                     load()
                                                 } catch (e: Exception) {
                                                     error = e.message
@@ -104,41 +168,91 @@ fun GoalsScreen(
                                         }
                                     )
                                 }
-                            }
 
-                            Text("Тип: ${goalTypeLabel(g.goalType)} | Статус: ${statusLabel(g.status)} | Приоритет: ${g.priority}")
+                                Spacer(Modifier.height(10.dp))
 
-                            Text(
-                                "Прогресс: ${g.progressValue}" +
-                                        (g.targetValue?.let { "/$it" } ?: "") +
-                                        (g.unit?.let { " $it" } ?: "")
-                            )
+                                // Кнопки
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { showAddDialog = true },
+                                        modifier = Modifier.weight(1f),
+                                        enabled = g.status != "CANCELED"
+                                    ) { Text("+ прогресс") }
 
-                            g.deadline?.let { Text("Дедлайн: $it") }
-                            g.description?.takeIf { it.isNotBlank() }?.let { Text(it) }
+                                    OutlinedButton(
+                                        onClick = { onEdit(g.id) },
+                                        modifier = Modifier.weight(1f)
+                                    ) { Text("Редактировать") }
 
-                            Spacer(Modifier.height(10.dp))
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                OutlinedButton(onClick = { onEdit(g.id) }) {
-                                    Text("Редактировать")
+                                    OutlinedButton(
+                                        onClick = {
+                                            scope.launch {
+                                                try {
+                                                    repo.delete(g.id)
+                                                    info = "Цель удалена"
+                                                    load()
+                                                } catch (e: Exception) {
+                                                    error = e.message
+                                                }
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    ) { Text("Удалить") }
                                 }
+                            }
+                        }
 
-                                OutlinedButton(
-                                    onClick = {
+                        // Диалог добавления прогресса
+                        if (showAddDialog) {
+                            AlertDialog(
+                                onDismissRequest = { showAddDialog = false },
+                                title = { Text("Добавить прогресс") },
+                                text = {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(
+                                            when (g.goalType) {
+                                                "STEPS" -> "Например: 500, 1000, 3000"
+                                                "QUANT" -> "Например: 1, 5, 10"
+                                                else -> "Например: 1"
+                                            }
+                                        )
+                                        OutlinedTextField(
+                                            value = deltaText,
+                                            onValueChange = { deltaText = it.filter(Char::isDigit) },
+                                            label = { Text("Сколько добавить") },
+                                            keyboardOptions = KeyboardOptions(
+                                                keyboardType = KeyboardType.Number
+                                            )
+                                        )
+                                    }
+                                },
+                                confirmButton = {
+                                    TextButton(onClick = {
+                                        val delta = deltaText.toIntOrNull() ?: 0
+                                        if (delta <= 0) {
+                                            error = "Введите число > 0"
+                                            return@TextButton
+                                        }
                                         scope.launch {
                                             try {
-                                                repo.delete(g.id)
+                                                repo.addProgress(g.id, delta) // <- должен быть в репозитории
+                                                info = "Прогресс добавлен ✅"
                                                 load()
                                             } catch (e: Exception) {
                                                 error = e.message
+                                            } finally {
+                                                showAddDialog = false
                                             }
                                         }
-                                    }
-                                ) {
-                                    Text("Удалить")
+                                    }) { Text("ОК") }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showAddDialog = false }) { Text("Отмена") }
                                 }
-                            }
+                            )
                         }
                     }
                 }

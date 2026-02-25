@@ -13,5 +13,7 @@ class GoalsRepository(private val api: ApiService) {
 
     suspend fun update(id: Long, req: GoalUpdateRequest): GoalDto =
         api.updateGoal(id, req)
+    suspend fun addProgress(id: Long, delta: Int): GoalDto =
+        api.addGoalProgress(id, GoalProgressRequest(delta))
 
 }

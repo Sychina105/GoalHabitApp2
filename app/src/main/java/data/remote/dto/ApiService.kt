@@ -84,4 +84,11 @@ interface ApiService {
         @Body req: HabitUpdateRequest
     ): HabitDto
 
+
+    @PUT("goals/{id}/progress")
+    suspend fun addGoalProgress(
+        @Path("id") id: Long,
+        @Body req: GoalProgressRequest
+    ): GoalDto
+
 }

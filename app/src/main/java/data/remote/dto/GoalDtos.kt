@@ -38,4 +38,5 @@ data class GoalDto(
     val showInProfile: Boolean = false
 )
 data class GoalStatusRequest(val status: String)
+data class GoalProgressRequest(val delta: Int = 1)
 
