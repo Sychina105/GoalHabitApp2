@@ -26,6 +26,13 @@
         import com.example.goalhabitapp.ui.friends.FriendsScreen
         import com.example.goalhabitapp.ui.friends.FriendProfileScreen
         import kotlinx.coroutines.launch
+        import android.Manifest
+        import android.os.Build
+        import androidx.activity.compose.rememberLauncherForActivityResult
+        import androidx.activity.result.contract.ActivityResultContracts
+        import androidx.compose.runtime.LaunchedEffect
+        import androidx.compose.ui.platform.LocalContext
+        import com.example.goalhabitapp.notifications.ReminderScheduler
 
         class MainActivity : ComponentActivity() {
             override fun onCreate(savedInstanceState: Bundle?) {
@@ -36,7 +43,23 @@
                         Surface {
                             val nav = rememberNavController()
                             val scope = androidx.compose.runtime.rememberCoroutineScope()
+                            val context = LocalContext.current
+                            val notifPermLauncher = rememberLauncherForActivityResult(
+                                ActivityResultContracts.RequestPermission()
+                            ) { granted ->
+                                // даже если не дали — приложение работает, просто без уведомлений
+                                if (granted) {
+                                    ReminderScheduler.scheduleDaily(context, hour = 22, minute = 0)
+                                }
+                            }
 
+                            LaunchedEffect(Unit) {
+                                if (Build.VERSION.SDK_INT >= 33) {
+                                    notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                } else {
+                                    ReminderScheduler.scheduleDaily(context, hour = 20, minute = 0)
+                                }
+                            }
                             val tokenStore = remember { TokenStore(this) }
                             val api = remember { Network.api("http://10.0.2.2:8000/", tokenStore) }
 
