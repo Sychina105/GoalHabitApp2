@@ -20,7 +20,8 @@ fun GoalsScreen(
     repo: GoalsRepository,
     onCreate: () -> Unit,
     onEdit: (Long) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onSteps: (Long) -> Unit
 ) {
     val scope = rememberCoroutineScope()
 
@@ -167,6 +168,9 @@ fun GoalsScreen(
                                             }
                                         }
                                     )
+                                    if (g.goalType == "STEPS") {
+                                        OutlinedButton(onClick = { onSteps(g.id) }) { Text("Шаги") }
+                                    }
                                 }
 
                                 Spacer(Modifier.height(10.dp))

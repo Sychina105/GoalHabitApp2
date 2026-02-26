@@ -165,13 +165,23 @@
                                         repo = goalsRepo,
                                         onCreate = { nav.navigate(Routes.CreateGoal) },
                                         onEdit = { id -> nav.navigate(Routes.editGoal(id)) },
-                                        onBack = { nav.popBackStack() }
+                                        onBack = { nav.popBackStack() },
+                                        onSteps = { id -> nav.navigate(Routes.goalSteps(id)) } // ✅
                                     )
                                 }
                                 composable(Routes.CreateGoal) {
                                     com.example.goalhabitapp.ui.goals.CreateGoalScreen(
                                         repo = goalsRepo,
                                         onDone = { nav.popBackStack() },
+                                        onBack = { nav.popBackStack() }
+                                    )
+                                }
+
+                                composable(Routes.GoalSteps) { backStack ->
+                                    val id = backStack.arguments?.getString("id")!!.toLong()
+                                    com.example.goalhabitapp.ui.goals.GoalStepsScreen(
+                                        goalId = id,
+                                        repo = goalsRepo,
                                         onBack = { nav.popBackStack() }
                                     )
                                 }
@@ -183,6 +193,7 @@
                                         onDone = { nav.popBackStack() },
                                         onBack = { nav.popBackStack() }
                                     )
+
                                 }
 
                                 // ✅ TEMPLATES

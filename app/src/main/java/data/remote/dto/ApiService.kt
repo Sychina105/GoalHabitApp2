@@ -91,4 +91,16 @@ interface ApiService {
         @Body req: GoalProgressRequest
     ): GoalDto
 
+    @GET("goals/{goalId}/steps")
+    suspend fun goalSteps(@Path("goalId") goalId: Long): List<GoalStepDto>
+
+    @POST("goals/{goalId}/steps")
+    suspend fun addGoalStep(@Path("goalId") goalId: Long, @Body body: StepCreateRequest): GoalStepDto
+
+    @PUT("steps/{stepId}")
+    suspend fun updateStep(@Path("stepId") stepId: Long, @Body body: StepUpdateRequest): GoalStepDto
+
+    @DELETE("steps/{stepId}")
+    suspend fun deleteStep(@Path("stepId") stepId: Long)
+
 }

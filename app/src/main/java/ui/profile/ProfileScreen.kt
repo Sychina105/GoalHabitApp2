@@ -27,7 +27,7 @@ fun ProfileScreen(
 
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
-
+    var points by remember { mutableStateOf(0) }
     var streak by remember { mutableStateOf(0) }
     var goalsDone by remember { mutableStateOf(0) }
     var achievements by remember { mutableStateOf<List<AchievementDto>>(emptyList()) }
@@ -41,6 +41,7 @@ fun ProfileScreen(
                 goalsDone = p.goalsCompleted
                 achievements = p.achievements
                 goals = p.goals // ✅ тут
+                points = p.points
             } catch (e: Exception) {
                 error = e.message
             } finally {
@@ -86,6 +87,8 @@ fun ProfileScreen(
                 Text("Текущий стрик: $streak дней", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(6.dp))
                 Text("Завершено целей: $goalsDone")
+                Text("Очки: ${points}", style = MaterialTheme.typography.titleMedium)
+
             }
         }
 
@@ -129,7 +132,9 @@ fun ProfileScreen(
                             MaterialTheme.colorScheme.primaryContainer
                         else Color.LightGray
                     )
-                ) {
+                )
+
+                {
                     Box(
                         modifier = Modifier.fillMaxWidth().padding(12.dp),
                         contentAlignment = Alignment.Center
@@ -137,6 +142,7 @@ fun ProfileScreen(
                         Text(a.title)
                     }
                 }
+
             }
         }
     }

@@ -40,3 +40,13 @@ data class GoalDto(
 data class GoalStatusRequest(val status: String)
 data class GoalProgressRequest(val delta: Int = 1)
 
+data class GoalStepDto(
+    val id: Long,
+    val goalId: Long,
+    val title: String,
+    val isDone: Boolean
+)
+
+data class StepCreateRequest(val title: String)
+data class StepUpdateRequest(val title: String? = null, val isDone: Boolean? = null)
+
